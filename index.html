@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lumière Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Cormorant Garamond', 'serif'],
+            body: ['DM Sans', 'sans-serif'],
+          },
+          colors: {
+            cream: '#F7F3ED',
+            charcoal: '#1C1C1A',
+            warm: '#C8A97E',
+            sage: '#8A9E8C',
+            blush: '#E8D5C4',
+            ink: '#2E2C28',
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.8s ease forwards',
+            'fade-in': 'fadeIn 1s ease forwards',
+            'slide-left': 'slideLeft 0.9s ease forwards',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(30px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideLeft: {
+              '0%': { opacity: '0', transform: 'translateX(40px)' },
+              '100%': { opacity: '1', transform: 'translateX(0)' },
+            },
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'DM Sans', sans-serif; background: #F7F3ED; color: #1C1C1A; }
+    .font-display { font-family: 'Cormorant Garamond', serif; }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #F7F3ED; }
+    ::-webkit-scrollbar-thumb { background: #C8A97E; border-radius: 2px; }
+
+    /* Noise texture overlay */
+    .noise::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* Animate on scroll */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.8s ease, transform 0.8s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    .reveal-left { opacity: 0; transform: translateX(-28px); transition: opacity 0.9s ease, transform 0.9s ease; }
+    .reveal-left.visible { opacity: 1; transform: translateX(0); }
+
+    .reveal-right { opacity: 0; transform: translateX(28px); transition: opacity 0.9s ease, transform 0.9s ease; }
+    .reveal-right.visible { opacity: 1; transform: translateX(0); }
+
+    /* Stagger delays */
+    .delay-1 { transition-delay: 0.1s; }
+    .delay-2 { transition-delay: 0.2s; }
+    .delay-3 { transition-delay: 0.3s; }
+    .delay-4 { transition-delay: 0.4s; }
+    .delay-5 { transition-delay: 0.5s; }
+
+    /* Hero gradient */
+    .hero-gradient {
+      background: linear-gradient(135deg, #1C1C1A 0%, #2E2C28 50%, #3A3530 100%);
+    }
+
+    /* Card hover lift */
+    .card-lift { transition: transform 0.35s ease, box-shadow 0.35s ease; }
+    .card-lift:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(28,28,26,0.12); }
+
+    /* Image tint overlay */
+    .img-tint { position: relative; overflow: hidden; }
+    .img-tint::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(28,28,26,0.5) 0%, transparent 50%);
+      transition: opacity 0.4s ease;
+    }
+    .img-tint:hover::after { opacity: 0.3; }
+
+    /* Underline hover */
+    .hover-line { position: relative; }
+    .hover-line::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 1px;
+      background: #C8A97E;
+      transition: width 0.35s ease;
+    }
+    .hover-line:hover::after { width: 100%; }
+
+    /* Split layout line */
+    .vertical-rule { width: 1px; background: linear-gradient(to bottom, transparent, #C8A97E, transparent); }
+
+    /* Nav blur */
+    .nav-blur { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+    /* Button shimmer */
+    .btn-shimmer {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-shimmer::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(200,169,126,0.3), transparent);
+      transition: left 0.5s ease;
+    }
+    .btn-shimmer:hover::before { left: 100%; }
+
+    /* Counter number style */
+    .stat-num { font-variant-numeric: tabular-nums; }
+
+    /* Marquee */
+    @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .marquee-track { display: flex; width: max-content; animation: marquee 28s linear infinite; }
+    .marquee-track:hover { animation-play-state: paused; }
+
+    /* Cursor glow */
+    .cursor-glow { cursor: none; }
+    #cursor {
+      position: fixed; width: 16px; height: 16px;
+      border-radius: 50%; background: #C8A97E;
+      pointer-events: none; z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: transform 0.08s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+      mix-blend-mode: multiply;
+    }
+    #cursor-ring {
+      position: fixed; width: 40px; height: 40px;
+      border-radius: 50%; border: 1px solid rgba(200,169,126,0.5);
+      pointer-events: none; z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: transform 0.18s ease, width 0.25s ease, height 0.25s ease;
+    }
+
+    /* Dotted section divider */
+    .dot-rule { background-image: radial-gradient(circle, #C8A97E 1px, transparent 1px); background-size: 12px 1px; height: 1px; }
+
+    /* Tag pill */
+    .tag { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; background: rgba(200,169,126,0.15); color: #C8A97E; border: 1px solid rgba(200,169,126,0.3); }
+
+    /* Form focus */
+    input:focus, textarea:focus { outline: none; border-color: #C8A97E !important; box-shadow: 0 0 0 3px rgba(200,169,126,0.1); }
+  </style>
+</head>
+<body class="noise overflow-x-hidden">
+
+<!-- Custom cursor -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- ═══════════ NAVIGATION ═══════════ -->
+<nav class="fixed top-0 left-0 right-0 z-50 nav-blur bg-cream/80 border-b border-warm/10">
+  <div class="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between h-16">
+    <a href="#" class="font-display text-2xl font-light tracking-widest text-charcoal">
+      Lumière
+    </a>
+    <div class="hidden md:flex items-center gap-10 font-body text-sm font-light tracking-wide text-ink/70">
+      <a href="#work" class="hover-line hover:text-charcoal transition-colors">Work</a>
+      <a href="#about" class="hover-line hover:text-charcoal transition-colors">Studio</a>
+      <a href="#services" class="hover-line hover:text-charcoal transition-colors">Services</a>
+      <a href="#contact" class="hover-line hover:text-charcoal transition-colors">Contact</a>
+    </div>
+    <a href="#contact" class="hidden md:block text-sm font-light tracking-widest border border-warm/40 text-charcoal px-5 py-2 btn-shimmer hover:border-warm transition-colors">
+      Let's Talk
+    </a>
+    <!-- Mobile hamburger -->
+    <button class="md:hidden flex flex-col gap-1.5 p-1" id="mobileMenuBtn">
+      <span class="w-6 h-px bg-charcoal block transition-all"></span>
+      <span class="w-4 h-px bg-charcoal block transition-all"></span>
+      <span class="w-6 h-px bg-charcoal block transition-all"></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobileMenu" class="fixed inset-0 z-40 bg-cream flex flex-col items-center justify-center gap-10 text-3xl font-display hidden">
+  <a href="#work" class="text-charcoal hover:text-warm transition-colors" onclick="closeMobileMenu()">Work</a>
+  <a href="#about" class="text-charcoal hover:text-warm transition-colors" onclick="closeMobileMenu()">Studio</a>
+  <a href="#services" class="text-charcoal hover:text-warm transition-colors" onclick="closeMobileMenu()">Services</a>
+  <a href="#contact" class="text-charcoal hover:text-warm transition-colors" onclick="closeMobileMenu()">Contact</a>
+</div>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="relative min-h-screen hero-gradient flex items-end pb-20 md:pb-32 pt-24 overflow-hidden">
+
+  <!-- Background pattern -->
+  <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(circle at 20% 50%, #C8A97E 1px, transparent 1px), radial-gradient(circle at 80% 20%, #C8A97E 1px, transparent 1px); background-size: 60px 60px;"></div>
+
+  <!-- Large background text -->
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-[160px] md:text-[240px] font-light text-white/[0.03] whitespace-nowrap select-none pointer-events-none leading-none">
+    LUMIÈRE
+  </div>
+
+  <div class="max-w-7xl mx-auto px-6 md:px-12 w-full relative z-10">
+    <div class="grid md:grid-cols-2 gap-12 items-end">
+
+      <!-- Left: Main headline -->
+      <div>
+        <div class="tag mb-6">Creative Studio · Est. 2019</div>
+        <h1 class="font-display text-5xl md:text-7xl xl:text-8xl font-light text-cream leading-[1.05] tracking-tight mb-8">
+          We craft<br/>
+          <em class="text-warm font-light">light</em> into<br/>
+          stories
+        </h1>
+        <div class="flex items-center gap-6 mt-10">
+          <a href="#work" class="bg-warm text-charcoal px-8 py-3.5 text-sm font-body font-medium tracking-widest hover:bg-blush transition-colors btn-shimmer">
+            View Work
+          </a>
+          <a href="#about" class="text-cream/60 text-sm font-body font-light tracking-widest hover:text-cream transition-colors flex items-center gap-2">
+            Our Studio
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: Stats -->
+      <div class="flex flex-col gap-8 md:items-end">
+        <p class="font-body text-cream/50 text-base font-light leading-relaxed max-w-xs md:text-right">
+          A boutique creative agency specialising in photography, brand identity, and visual storytelling for luxury clients worldwide.
+        </p>
+        <div class="flex gap-10 md:justify-end">
+          <div class="text-center md:text-right">
+            <div class="font-display text-5xl font-light text-warm stat-num" data-target="120">0</div>
+            <div class="font-body text-cream/40 text-xs tracking-widest mt-1 uppercase">Projects</div>
+          </div>
+          <div class="vertical-rule hidden md:block"></div>
+          <div class="text-center md:text-right">
+            <div class="font-display text-5xl font-light text-warm stat-num" data-target="48">0</div>
+            <div class="font-body text-cream/40 text-xs tracking-widest mt-1 uppercase">Clients</div>
+          </div>
+          <div class="vertical-rule hidden md:block"></div>
+          <div class="text-center md:text-right">
+            <div class="font-display text-5xl font-light text-warm stat-num" data-target="6">0</div>
+            <div class="font-body text-cream/40 text-xs tracking-widest mt-1 uppercase">Awards</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
+    <div class="font-body text-cream text-xs tracking-widest uppercase">Scroll</div>
+    <div class="w-px h-12 bg-warm/50 animate-pulse"></div>
+  </div>
+</section>
+
+<!-- ═══════════ MARQUEE ═══════════ -->
+<section class="bg-warm py-4 overflow-hidden">
+  <div class="marquee-track">
+    <div class="flex items-center gap-12 pr-12 text-charcoal font-display text-lg font-light italic tracking-wide select-none">
+      <span>Photography</span><span class="text-charcoal/30">·</span>
+      <span>Brand Identity</span><span class="text-charcoal/30">·</span>
+      <span>Visual Storytelling</span><span class="text-charcoal/30">·</span>
+      <span>Art Direction</span><span class="text-charcoal/30">·</span>
+      <span>Editorial Design</span><span class="text-charcoal/30">·</span>
+      <span>Film &amp; Video</span><span class="text-charcoal/30">·</span>
+      <span>Photography</span><span class="text-charcoal/30">·</span>
+      <span>Brand Identity</span><span class="text-charcoal/30">·</span>
+      <span>Visual Storytelling</span><span class="text-charcoal/30">·</span>
+      <span>Art Direction</span><span class="text-charcoal/30">·</span>
+      <span>Editorial Design</span><span class="text-charcoal/30">·</span>
+      <span>Film &amp; Video</span><span class="text-charcoal/30">·</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ WORK ═══════════ -->
+<section id="work" class="py-24 md:py-36 bg-cream">
+  <div class="max-w-7xl mx-auto px-6 md:px-12">
+
+    <div class="flex items-end justify-between mb-16">
+      <div class="reveal">
+        <div class="tag mb-4">Selected Works</div>
+        <h2 class="font-display text-5xl md:text-6xl font-light text-charcoal">Our Portfolio</h2>
+      </div>
+      <a href="#" class="hidden md:flex items-center gap-2 font-body text-sm text-ink/60 hover:text-charcoal transition-colors reveal delay-2">
+        All Projects
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
+      </a>
+    </div>
+
+    <!-- Portfolio grid -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+
+      <!-- Large item -->
+      <div class="md:col-span-7 reveal delay-1">
+        <div class="img-tint relative overflow-hidden card-lift cursor-pointer" style="height: 520px;">
+          <div class="absolute inset-0" style="background: linear-gradient(135deg, #2E2C28 0%, #4A3728 40%, #6B5040 100%);"></div>
+          <!-- Decorative shapes -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="w-48 h-48 rounded-full border border-warm/20"></div>
+            <div class="absolute w-64 h-64 rounded-full border border-warm/10"></div>
+            <div class="absolute w-80 h-80 rounded-full border border-warm/5"></div>
+            <div class="absolute w-32 h-1 bg-warm/40 rotate-45"></div>
+            <div class="absolute w-20 h-20 border border-warm/30 rotate-12 translate-x-16 translate-y-8"></div>
+            <span class="font-display text-8xl text-warm/20 font-light italic absolute select-none">01</span>
+          </div>
+          <div class="absolute bottom-6 left-6 right-6 z-10">
+            <div class="tag bg-charcoal/60 text-warm/80 border-warm/20 mb-3">Brand Identity</div>
+            <h3 class="font-display text-3xl font-light text-cream leading-tight">Elara Cosmetics</h3>
+            <p class="font-body text-cream/60 text-sm mt-1">Full rebrand · Paris, 2024</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: 2 stacked -->
+      <div class="md:col-span-5 flex flex-col gap-5">
+
+        <div class="reveal delay-2">
+          <div class="img-tint relative overflow-hidden card-lift cursor-pointer" style="height: 248px;">
+            <div class="absolute inset-0" style="background: linear-gradient(135deg, #1a2e2a 0%, #2d4a42 100%);"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="grid grid-cols-4 gap-3 opacity-20">
+                <div class="w-8 h-8 rounded-full bg-sage"></div><div class="w-8 h-8 bg-sage rotate-45"></div><div class="w-8 h-8 rounded-full bg-sage"></div><div class="w-8 h-8 bg-sage rotate-45"></div>
+                <div class="w-8 h-8 bg-sage rotate-45"></div><div class="w-8 h-8 rounded-full bg-sage"></div><div class="w-8 h-8 bg-sage rotate-45"></div><div class="w-8 h-8 rounded-full bg-sage"></div>
+              </div>
+            </div>
+            <div class="absolute bottom-5 left-5 z-10">
+              <div class="tag bg-charcoal/60 text-sage/80 border-sage/20 mb-2">Photography</div>
+              <h3 class="font-display text-2xl font-light text-cream">Forest & Foliage</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="reveal delay-3">
+          <div class="img-tint relative overflow-hidden card-lift cursor-pointer" style="height: 248px;">
+            <div class="absolute inset-0" style="background: linear-gradient(135deg, #2a1c1a 0%, #4a2e28 100%);"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="font-display text-9xl text-blush/10 font-light select-none">∞</div>
+              <div class="absolute w-32 h-px bg-warm/30"></div>
+              <div class="absolute w-px h-32 bg-warm/30"></div>
+            </div>
+            <div class="absolute bottom-5 left-5 z-10">
+              <div class="tag bg-charcoal/60 text-warm/80 border-warm/20 mb-2">Editorial</div>
+              <h3 class="font-display text-2xl font-light text-cream">Maison Lumière SS24</h3>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom row: 2 equal cards -->
+      <div class="md:col-span-5 reveal delay-2">
+        <div class="img-tint relative overflow-hidden card-lift cursor-pointer" style="height: 360px;">
+          <div class="absolute inset-0" style="background: linear-gradient(160deg, #1a1a2e 0%, #2c2a4a 100%);"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="relative">
+              <div class="w-28 h-28 border border-purple-300/20 rotate-45"></div>
+              <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border border-purple-300/30 rotate-12"></div>
+            </div>
+          </div>
+          <div class="absolute bottom-6 left-6 z-10">
+            <div class="tag bg-charcoal/60 text-purple-300/80 border-purple-300/20 mb-2">Motion</div>
+            <h3 class="font-display text-2xl font-light text-cream">Dusk Architecture</h3>
+            <p class="font-body text-cream/50 text-sm mt-1">Brand film · 2023</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="md:col-span-7 reveal delay-3">
+        <div class="img-tint relative overflow-hidden card-lift cursor-pointer" style="height: 360px;">
+          <div class="absolute inset-0" style="background: linear-gradient(120deg, #1e1a10 0%, #3a2e18 50%, #5a4a28 100%);"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="text-center">
+              <div class="font-display text-[80px] text-warm/15 font-light leading-none select-none">ATELIER</div>
+              <div class="w-full h-px bg-warm/10 mt-4"></div>
+              <div class="font-display text-[80px] text-warm/10 font-light leading-none select-none">DORÉ</div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-1/3" style="background: linear-gradient(to top, rgba(58,46,24,0.8), transparent);"></div>
+          </div>
+          <div class="absolute bottom-6 left-6 z-10">
+            <div class="tag bg-charcoal/60 text-warm/80 border-warm/20 mb-2">Identity &amp; Print</div>
+            <h3 class="font-display text-3xl font-light text-cream">Atelier Doré</h3>
+            <p class="font-body text-cream/50 text-sm mt-1">Complete identity system · Milan, 2024</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ ABOUT ═══════════ -->
+<section id="about" class="py-24 md:py-36 bg-charcoal">
+  <div class="max-w-7xl mx-auto px-6 md:px-12">
+
+    <div class="grid md:grid-cols-2 gap-16 md:gap-24 items-center">
+
+      <!-- Left: Image collage placeholder -->
+      <div class="relative reveal-left">
+        <div class="relative" style="height: 560px;">
+          <!-- Main portrait -->
+          <div class="absolute top-0 left-0 w-3/4 h-[420px] overflow-hidden" style="background: linear-gradient(135deg, #2a2420 0%, #4a3a30 100%);">
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="w-20 h-20 rounded-full border border-warm/30 mx-auto mb-4 flex items-center justify-center">
+                  <div class="w-10 h-10 rounded-full bg-warm/20"></div>
+                </div>
+                <div class="font-display text-cream/30 text-lg italic">Léa Moreau</div>
+                <div class="font-body text-cream/20 text-xs tracking-widest mt-1 uppercase">Founder &amp; Creative Director</div>
+              </div>
+            </div>
+          </div>
+          <!-- Accent card -->
+          <div class="absolute bottom-0 right-0 w-2/3 h-[280px] overflow-hidden border border-warm/20" style="background: linear-gradient(135deg, #C8A97E 0%, #A08060 100%);">
+            <div class="absolute inset-0 flex items-center justify-center flex-col gap-3 p-6">
+              <div class="font-display text-6xl font-light text-charcoal/80">6+</div>
+              <div class="font-body text-charcoal/60 text-sm tracking-widest uppercase text-center">Years of crafting visual excellence</div>
+            </div>
+          </div>
+          <!-- Small dot -->
+          <div class="absolute top-[430px] left-[calc(75%-20px)] w-10 h-10 rounded-full bg-warm/20 border border-warm/30"></div>
+        </div>
+      </div>
+
+      <!-- Right: About text -->
+      <div class="reveal-right">
+        <div class="tag text-warm border-warm/30 bg-warm/10 mb-6">Our Story</div>
+        <h2 class="font-display text-5xl md:text-6xl font-light text-cream mb-8 leading-tight">
+          Crafted with<br/>
+          <em class="text-warm">intention</em>,<br/>
+          built to last
+        </h2>
+        <p class="font-body text-cream/50 text-base leading-relaxed mb-6 font-light">
+          Founded in 2019 in Paris, Lumière Studio was born from a belief that great design doesn't just communicate — it resonates. We work with a select roster of clients who share our obsession with quality and narrative.
+        </p>
+        <p class="font-body text-cream/40 text-base leading-relaxed mb-10 font-light">
+          Every project begins with listening. We immerse ourselves in your world before we pick up a camera or open a file. The result is work that feels unmistakably yours.
+        </p>
+
+        <div class="dot-rule mb-10"></div>
+
+        <div class="grid grid-cols-3 gap-6">
+          <div>
+            <div class="font-display text-3xl text-warm font-light">Paris</div>
+            <div class="font-body text-cream/30 text-xs tracking-widest mt-1 uppercase">HQ</div>
+          </div>
+          <div>
+            <div class="font-display text-3xl text-warm font-light">Milan</div>
+            <div class="font-body text-cream/30 text-xs tracking-widest mt-1 uppercase">Studio</div>
+          </div>
+          <div>
+            <div class="font-display text-3xl text-warm font-light">Global</div>
+            <div class="font-body text-cream/30 text-xs tracking-widest mt-1 uppercase">Clients</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SERVICES ═══════════ -->
+<section id="services" class="py-24 md:py-36 bg-cream">
+  <div class="max-w-7xl mx-auto px-6 md:px-12">
+
+    <div class="mb-20 reveal">
+      <div class="tag mb-4">What We Do</div>
+      <h2 class="font-display text-5xl md:text-6xl font-light text-charcoal">Services</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+      <!-- Service 1 -->
+      <div class="reveal delay-1 group border border-charcoal/10 p-8 hover:border-warm/40 transition-all duration-300 hover:bg-warm/5 card-lift">
+        <div class="w-10 h-10 mb-8 relative">
+          <div class="w-10 h-10 border border-warm/40 rotate-45 group-hover:rotate-[90deg] transition-transform duration-500"></div>
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-warm/20 rounded-full"></div>
+        </div>
+        <div class="font-body text-warm text-xs tracking-widest uppercase mb-4">01</div>
+        <h3 class="font-display text-2xl font-light text-charcoal mb-4 leading-tight">Brand Identity</h3>
+        <p class="font-body text-ink/50 text-sm leading-relaxed font-light">Strategic positioning, logo systems, colour palettes, and comprehensive brand guidelines built for longevity.</p>
+        <div class="mt-8 flex items-center gap-2 text-warm text-sm font-body font-light group-hover:gap-4 transition-all">
+          Explore <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
+        </div>
+      </div>
+
+      <!-- Service 2 -->
+      <div class="reveal delay-2 group border border-charcoal/10 p-8 hover:border-warm/40 transition-all duration-300 hover:bg-warm/5 card-lift">
+        <div class="w-10 h-10 mb-8 relative">
+          <div class="w-10 h-10 rounded-full border border-warm/40 group-hover:scale-125 transition-transform duration-500"></div>
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-px bg-warm/60"></div>
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-4 bg-warm/60"></div>
+        </div>
+        <div class="font-body text-warm text-xs tracking-widest uppercase mb-4">02</div>
+        <h3 class="font-display text-2xl font-light text-charcoal mb-4 leading-tight">Photography &amp; Film</h3>
+        <p class="font-body text-ink/50 text-sm leading-relaxed font-light">Campaign photography, lookbooks, and short films that capture the soul of your brand in every frame.</p>
+        <div class="mt-8 flex items-center gap-2 text-warm text-sm font-body font-light group-hover:gap-4 transition-all">
+          Explore <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
+        </div>
+      </div>
+
+      <!-- Service 3 -->
+      <div class="reveal delay-3 group border border-charcoal/10 p-8 hover:border-warm/40 transition-all duration-300 hover:bg-warm/5 card-lift bg-warm/5">
+        <div class="w-10 h-10 mb-8 relative">
+          <div class="w-10 h-10 border border-warm/40 group-hover:rotate-45 transition-transform duration-500"></div>
+        </div>
+        <div class="font-body text-warm text-xs tracking-widest uppercase mb-4">03</div>
+        <h3 class="font-display text-2xl font-light text-charcoal mb-4 leading-tight">Art Direction</h3>
+        <p class="font-body text-ink/50 text-sm leading-relaxed font-light">Concept development, set design, talent casting, and on-set direction for editorial and commercial projects.</p>
+        <div class="mt-8 flex items-center gap-2 text-warm text-sm font-body font-light group-hover:gap-4 transition-all">
+          Explore <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
+        </div>
+      </div>
+
+      <!-- Service 4 -->
+      <div class="reveal delay-4 group border border-charcoal/10 p-8 hover:border-warm/40 transition-all duration-300 hover:bg-warm/5 card-lift">
+        <div class="w-10 h-10 mb-8 relative">
+          <div class="w-6 h-6 rounded-full border border-warm/40 group-hover:scale-150 transition-transform duration-500 absolute top-0 left-0"></div>
+          <div class="w-6 h-6 rounded-full border border-warm/20 group-hover:scale-50 transition-transform duration-500 absolute bottom-0 right-0"></div>
+        </div>
+        <div class="font-body text-warm text-xs tracking-widest uppercase mb-4">04</div>
+        <h3 class="font-display text-2xl font-light text-charcoal mb-4 leading-tight">Digital &amp; Web</h3>
+        <p class="font-body text-ink/50 text-sm leading-relaxed font-light">Bespoke web design and digital experiences crafted with the same care and craft as our print work.</p>
+        <div class="mt-8 flex items-center gap-2 text-warm text-sm font-body font-light group-hover:gap-4 transition-all">
+          Explore <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ TESTIMONIAL ═══════════ -->
+<section class="py-24 md:py-36 bg-ink">
+  <div class="max-w-4xl mx-auto px-6 md:px-12 text-center reveal">
+    <div class="font-display text-6xl text-warm/20 mb-6">"</div>
+    <blockquote class="font-display text-3xl md:text-4xl font-light text-cream leading-relaxed mb-10">
+      Lumière didn't just design our brand — they found the words we'd been searching for and made them visible.
+    </blockquote>
+    <div class="flex items-center justify-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-warm/20 border border-warm/30 flex items-center justify-center font-display text-warm text-sm">CM</div>
+      <div class="text-left">
+        <div class="font-body text-cream text-sm font-medium">Camille Marchand</div>
+        <div class="font-body text-cream/40 text-xs tracking-wide">CEO, Elara Cosmetics</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ CONTACT ═══════════ -->
+<section id="contact" class="py-24 md:py-36 bg-cream">
+  <div class="max-w-7xl mx-auto px-6 md:px-12">
+
+    <div class="grid md:grid-cols-2 gap-16 md:gap-24 items-start">
+
+      <!-- Left -->
+      <div class="reveal-left">
+        <div class="tag mb-6">Start a Project</div>
+        <h2 class="font-display text-5xl md:text-6xl font-light text-charcoal mb-8 leading-tight">
+          Let's make<br/>
+          something<br/>
+          <em class="text-warm">beautiful</em>
+        </h2>
+        <p class="font-body text-ink/50 text-base leading-relaxed font-light mb-10">
+          We take on a limited number of new projects each season to ensure every client receives our full attention and creative energy.
+        </p>
+
+        <div class="space-y-5">
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 border border-warm/30 flex items-center justify-center">
+              <svg class="w-4 h-4 text-warm" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+            </div>
+            <a href="mailto:hello@lumiere.studio" class="font-body text-ink/70 text-sm hover-line hover:text-charcoal transition-colors">hello@lumiere.studio</a>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 border border-warm/30 flex items-center justify-center">
+              <svg class="w-4 h-4 text-warm" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+            </div>
+            <span class="font-body text-ink/70 text-sm">12 Rue de la Paix, Paris 75001</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 border border-warm/30 flex items-center justify-center">
+              <svg class="w-4 h-4 text-warm" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <span class="font-body text-ink/70 text-sm">Currently booking for Q3 2025</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Form -->
+      <div class="reveal-right">
+        <form class="space-y-5" onsubmit="handleSubmit(event)">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="font-body text-xs tracking-widest text-ink/40 uppercase block mb-2">Name</label>
+              <input type="text" placeholder="Your name" class="w-full bg-transparent border border-charcoal/15 px-4 py-3 font-body text-sm text-charcoal placeholder-ink/30 focus:border-warm transition-colors" style="outline:none;"/>
+            </div>
+            <div>
+              <label class="font-body text-xs tracking-widest text-ink/40 uppercase block mb-2">Email</label>
+              <input type="email" placeholder="your@email.com" class="w-full bg-transparent border border-charcoal/15 px-4 py-3 font-body text-sm text-charcoal placeholder-ink/30 focus:border-warm transition-colors" style="outline:none;"/>
+            </div>
+          </div>
+          <div>
+            <label class="font-body text-xs tracking-widest text-ink/40 uppercase block mb-2">Service</label>
+            <select class="w-full bg-cream border border-charcoal/15 px-4 py-3 font-body text-sm text-charcoal/70 focus:border-warm transition-colors appearance-none" style="outline:none;">
+              <option value="">Select a service…</option>
+              <option>Brand Identity</option>
+              <option>Photography &amp; Film</option>
+              <option>Art Direction</option>
+              <option>Digital &amp; Web</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-body text-xs tracking-widest text-ink/40 uppercase block mb-2">Tell us about your project</label>
+            <textarea rows="5" placeholder="Describe your vision, timeline, and budget…" class="w-full bg-transparent border border-charcoal/15 px-4 py-3 font-body text-sm text-charcoal placeholder-ink/30 resize-none focus:border-warm transition-colors" style="outline:none;"></textarea>
+          </div>
+          <button type="submit" id="submitBtn" class="w-full bg-charcoal text-cream py-4 font-body text-sm tracking-widest uppercase btn-shimmer hover:bg-ink transition-colors">
+            Send Enquiry
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer class="bg-charcoal border-t border-cream/5 py-12">
+  <div class="max-w-7xl mx-auto px-6 md:px-12">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="font-display text-3xl font-light tracking-widest text-cream">Lumière</div>
+      <div class="flex items-center gap-8 font-body text-sm text-cream/30 font-light">
+        <a href="#" class="hover:text-warm transition-colors">Instagram</a>
+        <a href="#" class="hover:text-warm transition-colors">Behance</a>
+        <a href="#" class="hover:text-warm transition-colors">LinkedIn</a>
+      </div>
+      <div class="font-body text-cream/20 text-xs tracking-wide">© 2025 Lumière Studio. All rights reserved.</div>
+    </div>
+  </div>
+</footer>
+
+<!-- ═══════════ SCRIPTS ═══════════ -->
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+  });
+
+  function animateRing() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  document.querySelectorAll('a, button, [data-hover]').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.width = '8px'; cursor.style.height = '8px';
+      ring.style.width = '60px'; ring.style.height = '60px';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.width = '16px'; cursor.style.height = '16px';
+      ring.style.width = '40px'; ring.style.height = '40px';
+    });
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
+
+  // Counter animation
+  function animateCounter(el) {
+    const target = parseInt(el.dataset.target);
+    const duration = 1800;
+    const start = performance.now();
+    const update = now => {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(ease * target) + (target >= 100 ? '+' : target >= 6 ? '' : '');
+      if (progress < 1) requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
+  }
+
+  const counterObs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); counterObs.unobserve(e.target); } });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('[data-target]').forEach(el => counterObs.observe(el));
+
+  // Mobile menu
+  const btn = document.getElementById('mobileMenuBtn');
+  const menu = document.getElementById('mobileMenu');
+  btn.addEventListener('click', () => { menu.classList.toggle('hidden'); });
+  function closeMobileMenu() { menu.classList.add('hidden'); }
+
+  // Form submit
+  function handleSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.textContent = '✓ Message Sent';
+    btn.classList.add('bg-sage');
+    btn.classList.remove('bg-charcoal', 'hover:bg-ink');
+    setTimeout(() => {
+      btn.textContent = 'Send Enquiry';
+      btn.classList.remove('bg-sage');
+      btn.classList.add('bg-charcoal', 'hover:bg-ink');
+    }, 3000);
+  }
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+
+</body>
+</html>
